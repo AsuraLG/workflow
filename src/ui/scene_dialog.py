@@ -3,6 +3,8 @@ from tkinter import ttk, messagebox, filedialog, simpledialog
 from typing import Optional, Tuple, List, Dict, Callable
 from src.core.scene import Action
 import os
+import sys
+import tkinterdnd2 as tkdnd
 
 class WorkflowDialog:
     def __init__(
@@ -23,6 +25,7 @@ class WorkflowDialog:
 
         self._setup_ui()
         self._center_dialog()
+        self._setup_drag_drop()
 
     def _setup_ui(self) -> None:
         """设置UI组件"""
@@ -169,3 +172,32 @@ class WorkflowDialog:
                 os.startfile(path)
             except Exception as e:
                 messagebox.showerror("错误", f"无法打开路径：{path}\n错误信息：{str(e)}")
+
+    def _setup_drag_drop(self) -> None:
+        """设置拖拽支持"""
+        # 创建拖拽支持
+        self.dnd = tkdnd.TkinterDnD.TkinterDnD(self.dialog)
+        self.dnd.drop_target_register(tkdnd.DND_FILES)
+        self.dnd.dnd_bind('<<Drop>>', self._on_drop)
+
+        # 设置拖拽提示
+        self.dialog.configure(highlightthickness=2)
+        self.dialog.configure(highlightbackground='#0078D7')
+        self.dialog.configure(highlightcolor='#0078D7')
+
+    def _on_drop(self, event: tk.Event) -> None:
+        """处理拖拽事件"""
+        try:
+            # 获取拖拽的文件路径
+            files = event.data.split()
+            for file_path in files:
+                # 移除路径中的引号（如果有）
+                file_path = file_path.strip('"')
+
+                # 检查是文件还是文件夹
+                if os.path.isdir(file_path):
+                    self._add_action('folder', file_path)
+                elif os.path.isfile(file_path):
+                    self._add_action('file', file_path)
+        except Exception as e:
+            messagebox.showerror("错误", f"处理拖拽文件时出错：{str(e)}")
