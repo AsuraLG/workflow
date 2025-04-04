@@ -10,5 +10,7 @@ echo 正在安装依赖...
 pip install -r requirements.txt
 
 echo 设置完成！
-echo 请使用 run.bat 来运行程序
+
+set runbat=run.bat
+echo 请使用 %runbat% 来运行程序
 pause
