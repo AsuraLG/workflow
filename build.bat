@@ -16,15 +16,22 @@ pyinstaller --noconfirm ^
     --paths src ^
     --add-data "src/utils/workflows.json;utils" ^
     --hidden-import=ui ^
+    --hidden-import=ui.main_window ^
+    --hidden-import=ui.scene_dialog ^
     --hidden-import=core ^
+    --hidden-import=core.scene ^
     --hidden-import=utils ^
+    --hidden-import=utils.path_utils ^
     --hidden-import=ttkthemes ^
     --hidden-import=tkinter ^
+    --hidden-import=tkinterdnd2 ^
     --hidden-import=json ^
     --hidden-import=os ^
     --hidden-import=time ^
     --hidden-import=subprocess ^
     --hidden-import=sys ^
+    --hidden-import=uuid ^
+    --hidden-import=dataclasses ^
     src/main.py
 
 echo 正在复制数据文件...
