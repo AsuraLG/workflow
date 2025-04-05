@@ -38,3 +38,4 @@ scenes.json
 
 # python缓存
 **/__pycache__/**
+**/*.pyc
