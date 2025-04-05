@@ -37,4 +37,5 @@ scenes.json
 工作流管理器.spec
 
 # python缓存
-*.pyc
+**/__pycache__/**
+**/*.pyc
