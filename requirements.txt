@@ -1,3 +1,5 @@
 ttkthemes==3.2.2
 tkinterdnd2==0.3.0
 typing-extensions==4.9.0
+pywin32==306
+tkinterdnd2==0.3.0

@@ -1,7 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, simpledialog
-from typing import Optional, Tuple, List, Dict, Callable
-from src.core.scene import Action
+from typing import Optional, List, Dict, Callable
 import os
 
 class WorkflowDialog:
@@ -12,17 +11,25 @@ class WorkflowDialog:
         actions: Optional[List[Dict]] = None,
         on_save: Optional[Callable[[str, List[Dict]], None]] = None
     ):
-        self.result = None
         self.parent = parent
         self.on_save = on_save
         self.actions = actions if actions else []
 
+        # 使用普通的 Toplevel
         self.dialog = tk.Toplevel(parent)
         self.dialog.title("工作流编辑")
         self.dialog.geometry("600x400")
 
+        # 注册拖拽目标
+        self.dialog.drop_target_register('DND_Files')
+        self.dialog.dnd_bind('<<Drop>>', self._on_drop)
+
         self._setup_ui()
         self._center_dialog()
+
+        # 如果是编辑模式，设置工作流名称
+        if workflow_name:
+            self.name_entry.insert(0, workflow_name)
 
     def _setup_ui(self) -> None:
         """设置UI组件"""
@@ -148,8 +155,6 @@ class WorkflowDialog:
 
         if self.on_save:
             self.on_save(workflow_name, self.actions)
-        else:
-            self.result = (workflow_name, self.actions)
         self.dialog.destroy()
 
     def _on_double_click_action(self, event: tk.Event) -> None:
@@ -169,3 +174,20 @@ class WorkflowDialog:
                 os.startfile(path)
             except Exception as e:
                 messagebox.showerror("错误", f"无法打开路径：{path}\n错误信息：{str(e)}")
+
+    def _on_drop(self, event: tk.Event) -> None:
+        """处理拖拽释放事件"""
+        try:
+            # 获取拖拽的文件路径
+            files = event.data.split()
+            for file_path in files:
+                # 移除路径中的引号（如果有）
+                file_path = file_path.strip('"')
+
+                # 检查是文件还是文件夹
+                if os.path.isdir(file_path):
+                    self._add_action('folder', file_path)
+                elif os.path.isfile(file_path):
+                    self._add_action('file', file_path)
+        except Exception as e:
+            messagebox.showerror("错误", f"处理拖拽文件时出错：{str(e)}")
