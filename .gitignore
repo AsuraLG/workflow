@@ -8,7 +8,7 @@ node_modules/
 /dist
 /build
 
-#虚拟环境依赖
+# 虚拟环境依赖
 /venv
 
 # 日志文件
@@ -34,6 +34,7 @@ scenes.json
 /src/utils/workflows.json
 
 # 其他文件
-/build
-/dist
 工作流管理器.spec
+
+# python缓存
+*.pyc
