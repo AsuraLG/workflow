@@ -1,19 +1,23 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Tuple
 import os
 import time
+import tkinterdnd2
 from src.core.scene import Workflow, WorkflowManager
 from src.ui.scene_dialog import WorkflowDialog
 
 class MainWindow:
     def __init__(self):
-        self.root = tk.Tk()
+        self.root = tkinterdnd2.TkinterDnD.Tk()
         self.root.title("工作流管理器")
         self.root.geometry("600x400")
 
         # 初始化工作流管理器
         self.workflow_manager = WorkflowManager()
+
+        # 用于存储列表项与工作流ID的映射
+        self.list_item_to_id: Dict[str, str] = {}
 
         # 设置UI
         self._setup_ui()
@@ -81,8 +85,16 @@ class MainWindow:
     def _update_workflow_list(self) -> None:
         """更新工作流列表"""
         self.workflow_listbox.delete(0, tk.END)
-        for workflow_name in self.workflow_manager.workflows.keys():
-            self.workflow_listbox.insert(tk.END, workflow_name)
+        self.list_item_to_id.clear()
+
+        # 按名称排序显示
+        workflows = sorted(
+            self.workflow_manager.workflows.values(),
+            key=lambda w: w.name
+        )
+        for workflow in workflows:
+            self.workflow_listbox.insert(tk.END, workflow.name)
+            self.list_item_to_id[workflow.name] = workflow.id
 
     def _on_select_workflow(self, event: tk.Event) -> None:
         """处理工作流选择事件"""
@@ -100,87 +112,112 @@ class MainWindow:
             workflow = Workflow(name=workflow_name)
             for action in actions:
                 workflow.add_action(action['type'], action['path'], action['delay'])
-            self.workflow_manager.add_workflow(workflow)
-            self._update_workflow_list()
+            success, error = self.workflow_manager.add_workflow(workflow)
+            if not success:
+                messagebox.showerror("错误", error)
+            else:
+                self._update_workflow_list()
+
+    def _get_selected_workflow_id(self) -> Optional[str]:
+        """获取当前选中的工作流ID"""
+        selection = self.workflow_listbox.curselection()
+        if not selection:
+            return None
+        workflow_name = self.workflow_listbox.get(selection[0])
+        return self.list_item_to_id.get(workflow_name)
 
     def _edit_workflow(self) -> None:
         """编辑工作流"""
-        selection = self.workflow_listbox.curselection()
-        if not selection:
+        workflow_id = self._get_selected_workflow_id()
+        if not workflow_id:
             messagebox.showwarning("警告", "请先选择一个工作流")
             return
 
-        workflow_name = self.workflow_listbox.get(selection[0])
-        workflow = self.workflow_manager.get_workflow(workflow_name)
+        workflow = self.workflow_manager.get_workflow(workflow_id)
         if workflow:
             actions = [{'type': a.type, 'path': a.path, 'delay': a.delay} for a in workflow.actions]
-            dialog = WorkflowDialog(self.root, workflow_name=workflow_name, actions=actions, on_save=self._handle_workflow_save)
-            if dialog.result:
-                new_name, new_actions = dialog.result
-                if new_name != workflow_name:
-                    self.workflow_manager.remove_workflow(workflow_name)
-                new_workflow = Workflow(name=new_name)
-                for action in new_actions:
-                    new_workflow.add_action(action['type'], action['path'], action['delay'])
-                self.workflow_manager.add_workflow(new_workflow)
+            dialog = WorkflowDialog(self.root, workflow_name=workflow.name, actions=actions, on_save=lambda name, acts: self._handle_workflow_edit(workflow_id, name, acts))
+
+    def _handle_workflow_edit(self, workflow_id: str, workflow_name: str, actions: List[Dict]) -> None:
+        """处理工作流编辑保存
+
+        Args:
+            workflow_id: 要编辑的工作流ID
+            workflow_name: 新的工作流名称
+            actions: 新的动作列表
+        """
+        workflow = self.workflow_manager.get_workflow(workflow_id)
+        if workflow:
+            # 更新工作流
+            workflow.name = workflow_name
+            workflow.actions = []
+            for action in actions:
+                workflow.add_action(action['type'], action['path'], action['delay'])
+            # 保存更改
+            success, error = self.workflow_manager.update_workflow(workflow)
+            if not success:
+                messagebox.showerror("错误", error)
+            else:
                 self._update_workflow_list()
 
     def _delete_workflow(self) -> None:
         """删除工作流"""
-        selection = self.workflow_listbox.curselection()
-        if not selection:
+        workflow_id = self._get_selected_workflow_id()
+        if not workflow_id:
             messagebox.showwarning("警告", "请先选择一个工作流")
             return
 
-        workflow_name = self.workflow_listbox.get(selection[0])
-        if messagebox.askyesno("确认", f"确定要删除工作流 '{workflow_name}' 吗？"):
-            if self.workflow_manager.remove_workflow(workflow_name):
+        workflow = self.workflow_manager.get_workflow(workflow_id)
+        if workflow and messagebox.askyesno("确认", f"确定要删除工作流 '{workflow.name}' 吗？"):
+            if self.workflow_manager.remove_workflow(workflow_id):
                 self._update_workflow_list()
 
     def _copy_workflow(self) -> None:
         """复制工作流"""
-        selection = self.workflow_listbox.curselection()
-        if not selection:
+        workflow_id = self._get_selected_workflow_id()
+        if not workflow_id:
             messagebox.showwarning("警告", "请先选择一个工作流")
             return
 
-        source_name = self.workflow_listbox.get(selection[0])
-        target_name = simpledialog.askstring("复制工作流", "请输入新工作流名称:", initialvalue=f"{source_name}_副本")
-        if target_name:
-            if self.workflow_manager.copy_workflow(source_name, target_name):
-                self._update_workflow_list()
-            else:
-                messagebox.showerror("错误", "工作流名称已存在或源工作流不存在")
+        workflow = self.workflow_manager.get_workflow(workflow_id)
+        if workflow:
+            target_name = simpledialog.askstring("复制工作流", "请输入新工作流名称:", initialvalue=f"{workflow.name}_副本")
+            if target_name:
+                success, error = self.workflow_manager.copy_workflow(workflow_id, target_name)
+                if not success:
+                    messagebox.showerror("错误", error)
+                else:
+                    self._update_workflow_list()
 
     def _execute_workflow(self) -> None:
         """执行工作流"""
-        selection = self.workflow_listbox.curselection()
-        if not selection:
+        workflow_id = self._get_selected_workflow_id()
+        if not workflow_id:
             messagebox.showwarning("警告", "请先选择一个工作流")
             return
 
-        workflow_name = self.workflow_listbox.get(selection[0])
-        workflow = self.workflow_manager.get_workflow(workflow_name)
+        workflow = self.workflow_manager.get_workflow(workflow_id)
         if workflow:
             for action in workflow.actions:
                 try:
                     if action.delay > 0:
                         time.sleep(action.delay)
-                    if action.type == 'file':
-                        os.startfile(action.path)
-                    else:
-                        os.startfile(action.path)
+                    os.startfile(action.path)
                 except Exception as e:
                     messagebox.showerror("错误", f"执行动作时出错：{str(e)}")
                     break
 
     def _handle_workflow_save(self, workflow_name: str, actions: List[Dict]) -> None:
-        """处理工作流保存"""
+        """处理新建工作流保存"""
+        # 创建新工作流
         workflow = Workflow(name=workflow_name)
         for action in actions:
             workflow.add_action(action['type'], action['path'], action['delay'])
-        self.workflow_manager.add_workflow(workflow)
-        self._update_workflow_list()
+        success, error = self.workflow_manager.add_workflow(workflow)
+        if not success:
+            messagebox.showerror("错误", error)
+        else:
+            self._update_workflow_list()
 
     def run(self) -> None:
         """运行应用程序"""

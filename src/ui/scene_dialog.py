@@ -1,10 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, simpledialog
-from typing import Optional, Tuple, List, Dict, Callable
-from src.core.scene import Action
+from typing import Optional, List, Dict, Callable
 import os
-import sys
-import tkinterdnd2 as tkdnd
 
 class WorkflowDialog:
     def __init__(
@@ -14,18 +11,25 @@ class WorkflowDialog:
         actions: Optional[List[Dict]] = None,
         on_save: Optional[Callable[[str, List[Dict]], None]] = None
     ):
-        self.result = None
         self.parent = parent
         self.on_save = on_save
         self.actions = actions if actions else []
 
+        # 使用普通的 Toplevel
         self.dialog = tk.Toplevel(parent)
         self.dialog.title("工作流编辑")
         self.dialog.geometry("600x400")
 
+        # 注册拖拽目标
+        self.dialog.drop_target_register('DND_Files')
+        self.dialog.dnd_bind('<<Drop>>', self._on_drop)
+
         self._setup_ui()
         self._center_dialog()
-        self._setup_drag_drop()
+
+        # 如果是编辑模式，设置工作流名称
+        if workflow_name:
+            self.name_entry.insert(0, workflow_name)
 
     def _setup_ui(self) -> None:
         """设置UI组件"""
@@ -151,8 +155,6 @@ class WorkflowDialog:
 
         if self.on_save:
             self.on_save(workflow_name, self.actions)
-        else:
-            self.result = (workflow_name, self.actions)
         self.dialog.destroy()
 
     def _on_double_click_action(self, event: tk.Event) -> None:
@@ -173,20 +175,8 @@ class WorkflowDialog:
             except Exception as e:
                 messagebox.showerror("错误", f"无法打开路径：{path}\n错误信息：{str(e)}")
 
-    def _setup_drag_drop(self) -> None:
-        """设置拖拽支持"""
-        # 创建拖拽支持
-        self.dnd = tkdnd.TkinterDnD.TkinterDnD(self.dialog)
-        self.dnd.drop_target_register(tkdnd.DND_FILES)
-        self.dnd.dnd_bind('<<Drop>>', self._on_drop)
-
-        # 设置拖拽提示
-        self.dialog.configure(highlightthickness=2)
-        self.dialog.configure(highlightbackground='#0078D7')
-        self.dialog.configure(highlightcolor='#0078D7')
-
     def _on_drop(self, event: tk.Event) -> None:
-        """处理拖拽事件"""
+        """处理拖拽释放事件"""
         try:
             # 获取拖拽的文件路径
             files = event.data.split()
