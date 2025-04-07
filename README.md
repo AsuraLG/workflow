@@ -24,37 +24,29 @@ workflow/
 │   │   └── path_utils.py  # 路径处理工具
 │   └── main.py            # 程序入口
 ├── requirements.txt        # 项目依赖
-├── run.bat                # 运行脚本
+├── run.bat                # 项目开发运行脚本
+├── setup.bat              # 构建项目开发依赖环境脚本
+├── build.bat              # 构建可执行程序脚本，该可执行程序可在无python环境场景使用
 └── README.md              # 项目说明
-```
-
-## 安装依赖
-
-```bash
-pip install -r requirements.txt
 ```
 
 ## 运行程序
 
-1. 双击 `run.bat` 文件运行程序
-2. 或在命令行中执行：
-   ```bash
-   python src/main.py
-   ```
+在右侧Releases中下载并执行可执行程序（.exe后缀）
 
 ## 使用方法
 
 1. **新建工作流**
    - 点击"新建工作流"按钮
    - 输入工作流名称
-   - 添加文件或文件夹操作
+   - 添加文件或文件夹操作，支持拖拽
    - 为每个操作设置延迟时间
    - 点击"保存"按钮
 
 2. **编辑工作流**
    - 选择要编辑的工作流
    - 点击"编辑工作流"按钮
-   - 修改工作流名称或操作
+   - 修改工作流名称或操作，支持拖拽
    - 点击"保存"按钮
 
 3. **复制工作流**
@@ -81,6 +73,8 @@ pip install -r requirements.txt
 
 ## 开发环境设置
 
+### 方式一
+
 1. 创建虚拟环境：
    ```bash
    python -m venv venv
@@ -101,12 +95,21 @@ pip install -r requirements.txt
    pip install -r requirements.txt
    ```
 
+### 方式二
+
+在项目目录下执行setup.bat脚本
+- Windows:
+  ```bash
+  .\setup.bat
+  ```
+
 ## 打包说明
 
-使用 PyInstaller 打包：
-```bash
-pyinstaller --onefile --windowed src/main.py
-```
+在项目目录下执行build.bat脚本
+- Windows:
+  ```bash
+  .\build.bat
+  ```
 
 ## 注意事项
 
