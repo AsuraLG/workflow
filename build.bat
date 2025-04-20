@@ -13,6 +13,7 @@ pyinstaller --noconfirm ^
     --onefile ^
     --windowed ^
     --name "工作流管理器" ^
+    --icon=icon.ico ^
     --paths src ^
     --add-data "src/utils/workflows.json;utils" ^
     --hidden-import=ui ^
