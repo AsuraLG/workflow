@@ -106,17 +106,7 @@ class MainWindow:
 
     def _create_workflow(self) -> None:
         """创建新工作流"""
-        dialog = WorkflowDialog(self.root, on_save=self._handle_workflow_save)
-        if dialog.result:
-            workflow_name, actions = dialog.result
-            workflow = Workflow(name=workflow_name)
-            for action in actions:
-                workflow.add_action(action['type'], action['path'], action['delay'])
-            success, error = self.workflow_manager.add_workflow(workflow)
-            if not success:
-                messagebox.showerror("错误", error)
-            else:
-                self._update_workflow_list()
+        WorkflowDialog(self.root, on_save=self._handle_workflow_save)
 
     def _get_selected_workflow_id(self) -> Optional[str]:
         """获取当前选中的工作流ID"""
