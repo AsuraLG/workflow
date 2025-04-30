@@ -20,10 +20,7 @@ class WorkflowDialog:
         self.dialog.title("工作流编辑")
         self.dialog.geometry("600x400")
 
-        # 注册拖拽目标
-        self.dialog.drop_target_register('DND_Files')
-        self.dialog.dnd_bind('<<Drop>>', self._on_drop)
-
+        # 初始化UI
         self._setup_ui()
         self._center_dialog()
 
@@ -67,6 +64,9 @@ class WorkflowDialog:
 
         # 绑定事件
         self.actions_listbox.bind('<Double-Button-1>', self._on_double_click_action)
+        self.actions_listbox.bind('<ButtonPress-1>', self._on_drag_start)
+        self.actions_listbox.bind('<B1-Motion>', self._on_drag_motion)
+        self.actions_listbox.bind('<ButtonRelease-1>', self._on_drag_end)
 
         # 按钮框架
         button_frame = ttk.Frame(self.dialog, padding="10")
@@ -175,19 +175,34 @@ class WorkflowDialog:
             except Exception as e:
                 messagebox.showerror("错误", f"无法打开路径：{path}\n错误信息：{str(e)}")
 
-    def _on_drop(self, event: tk.Event) -> None:
-        """处理拖拽释放事件"""
-        try:
-            # 获取拖拽的文件路径
-            files = event.data.split()
-            for file_path in files:
-                # 移除路径中的引号（如果有）
-                file_path = file_path.strip('"')
+    def _on_drag_start(self, event: tk.Event) -> None:
+        """处理拖拽开始事件"""
+        self.drag_start_index = self.actions_listbox.nearest(event.y)
+        self.drag_start_y = event.y
 
-                # 检查是文件还是文件夹
-                if os.path.isdir(file_path):
-                    self._add_action('folder', file_path)
-                elif os.path.isfile(file_path):
-                    self._add_action('file', file_path)
-        except Exception as e:
-            messagebox.showerror("错误", f"处理拖拽文件时出错：{str(e)}")
+    def _on_drag_motion(self, event: tk.Event) -> None:
+        """处理拖拽移动事件"""
+        if hasattr(self, 'drag_start_index'):
+            current_index = self.actions_listbox.nearest(event.y)
+            if current_index != self.drag_start_index:
+                # 高亮显示目标位置
+                self.actions_listbox.selection_clear(0, tk.END)
+                self.actions_listbox.selection_set(current_index)
+
+    def _on_drag_end(self, event: tk.Event) -> None:
+        """处理拖拽结束事件"""
+        if hasattr(self, 'drag_start_index'):
+            end_index = self.actions_listbox.nearest(event.y)
+            if end_index != self.drag_start_index:
+                # 交换列表项
+                item = self.actions_listbox.get(self.drag_start_index)
+                self.actions_listbox.delete(self.drag_start_index)
+                self.actions_listbox.insert(end_index, item)
+
+                # 交换actions列表中的顺序
+                action = self.actions.pop(self.drag_start_index)
+                self.actions.insert(end_index, action)
+
+            # 清除选择状态
+            self.actions_listbox.selection_clear(0, tk.END)
+            del self.drag_start_index
