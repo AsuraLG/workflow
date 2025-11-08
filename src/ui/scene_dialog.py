@@ -179,19 +179,43 @@ class WorkflowDialog:
         """处理拖拽开始事件"""
         self.drag_start_index = self.actions_listbox.nearest(event.y)
         self.drag_start_y = event.y
+        self.drag_start_x = event.x
+
+        # 设置一个定时器来检测是否是单机选择
+        self.click_timer = self.dialog.after(150, self._on_single_click)
 
     def _on_drag_motion(self, event: tk.Event) -> None:
         """处理拖拽移动事件"""
         if hasattr(self, 'drag_start_index'):
+            # 取消单机选择定时器，因为检测到了拖拽移动
+            if hasattr(self, 'click_timer'):
+                self.dialog.after_cancel(self.click_timer)
+                del self.click_timer
+
             current_index = self.actions_listbox.nearest(event.y)
             if current_index != self.drag_start_index:
                 # 高亮显示目标位置
                 self.actions_listbox.selection_clear(0, tk.END)
                 self.actions_listbox.selection_set(current_index)
 
+    def _on_single_click(self) -> None:
+        """处理单机选择事件"""
+        # 只有在没有检测到拖拽移动时才设置选择
+        if hasattr(self, 'drag_start_index') and hasattr(self, 'click_timer'):
+            index = self.drag_start_index
+            self.actions_listbox.selection_clear(0, tk.END)
+            self.actions_listbox.selection_set(index)
+            # 清理定时器引用
+            del self.click_timer
+
     def _on_drag_end(self, event: tk.Event) -> None:
         """处理拖拽结束事件"""
         if hasattr(self, 'drag_start_index'):
+            # 取消可能存在的单机选择定时器
+            if hasattr(self, 'click_timer'):
+                self.dialog.after_cancel(self.click_timer)
+                del self.click_timer
+
             end_index = self.actions_listbox.nearest(event.y)
             if end_index != self.drag_start_index:
                 # 交换列表项
@@ -203,6 +227,7 @@ class WorkflowDialog:
                 action = self.actions.pop(self.drag_start_index)
                 self.actions.insert(end_index, action)
 
-            # 清除选择状态
+            # 清除选择状态，但保留最后点击的项目选择
             self.actions_listbox.selection_clear(0, tk.END)
+            self.actions_listbox.selection_set(end_index)
             del self.drag_start_index
